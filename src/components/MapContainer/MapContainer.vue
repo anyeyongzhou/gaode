@@ -30,7 +30,7 @@ export default {
       AMapLoader.load({
         key: '02c854342b6ea9c8f1e85cb0a6f2882f', // 申请好的Web端开发者Key，首次调用 load 时必填
         version: '2.0', // 指定要加载的 JSAPI 的版本，缺省时默认为 1.4.15
-        plugins: ['AMap.ToolBar', 'AMap.Scale', 'AMap.HawkEye', 'AMap.MapType', 'AMap.Geolocation', 'AMap.AutoComplete', 'AMap.PlaceSearch'] // 需要使用的的插件列表，如比例尺'AMap.Scale'等
+        plugins: ['AMap.ToolBar', 'AMap.Scale', 'AMap.HawkEye', 'AMap.MapType', 'AMap.Geolocation', 'AMap.AutoComplete', 'AMap.PlaceSearch', 'AMap.Geocoder'] // 需要使用的的插件列表，如比例尺'AMap.Scale'等
       })
         .then(AMap => {
           this.map = new AMap.Map('container', {
@@ -49,6 +49,54 @@ export default {
             map: this.map
           }) //构造地点查询类
           this.auto.on('select', this.select)
+          this.map.on('click', e => {
+            let lat = e.lnglat.lat
+            let lng = e.lnglat.lng
+            this.getLngLatService(lat, lng)
+          })
+          //添加固定点标记
+          let marker1 = new AMap.Marker({
+            position: new AMap.LngLat(121.473667, 31.230525), // 经纬度对象，也可以是经纬度构成的一维数组[116.39, 39.9]
+            title: '上海'
+          })
+          //添加点标记
+          this.map.add(marker1)
+
+          // 创建 AMap.Icon 实例：
+          let icon = new AMap.Icon({
+            size: new AMap.Size(16, 16), // 图标尺寸
+            image: require('@/imgs/Marker.png'), // Icon的图像
+            imageOffset: new AMap.Pixel(0, 0), // 图像相对展示区域的偏移量，适于雪碧图等
+            imageSize: new AMap.Size(16, 16) // 根据所设置的大小拉伸或压缩图片
+          })
+
+          let defineMarker2 = new AMap.Marker({
+            position: new AMap.LngLat(121.273667, 31.130525),
+            // offset: new AMap.Pixel(-10, -10),
+            icon: icon, // 添加 Icon 实例
+            title: 'definePlace',
+            zoom: 13
+          })
+
+          this.map.add(defineMarker2)
+
+          //添加自定义的点标记
+          let defineMarker1 = new AMap.Marker({
+            position: new AMap.LngLat(121.173667, 31.090525),
+            icon: require('@/imgs/mar.png'),
+            title: 'defineMarkerPlace'
+          })
+          this.map.add(defineMarker1)
+
+          //圆点标记示例
+          let circleMarker1 = new AMap.CircleMarker({
+            map: this.map,
+            center: new AMap.LngLat(121.153667, 31.080525),
+            radius: 20,
+            fillColor: '#ff00ff'
+          })
+
+          circleMarker1.setMap(this.map)
         })
         .catch(e => {
           console.log(e)
@@ -200,6 +248,40 @@ export default {
         })
         this.heatmapList.push(this.heatmap)
         this.heatmap.show()
+      })
+    },
+
+    //逆向地理编码服务
+    getLngLatService(lat, lng) {
+      let pos = [lng, lat]
+      let lnglat = new AMap.LngLat(lng, lat)
+      let geocoder = new AMap.Geocoder({
+        // city 指定进行编码查询的城市，支持传入城市名、adcode 和 citycode
+        city: '全国'
+      })
+
+      //1.点击地图任意位置生成一个marker
+      let marker = new AMap.Marker({
+        position: new AMap.LngLat(lng, lat),
+        icon: require('@/imgs/mar.png')
+      })
+      this.map.add(marker)
+      let address = ''
+      //2.将位置转化为坐标点-->地理信息
+      //3.根据地理信息（地址）进行搜索获取详细信息！
+      geocoder.getAddress(lnglat, (status, result) => {
+        if (status === 'complete' && result.regeocode) {
+          address = result.regeocode.formattedAddress
+          let res = {
+            pos: pos,
+            address: address
+          }
+
+          //需求：固定的窗体信息进行展示！
+          bus.$emit('shareAddressDetails', res)
+        } else {
+          log.error('根据经纬度查询地址失败')
+        }
       })
     }
   },
